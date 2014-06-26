@@ -1,0 +1,50 @@
+Script that created the export
+==============================
+```
+	from search.models import *
+	export = {"tags":{}, "items":{}}
+	tags = Tag.objects.all()
+	for tag in tags:
+	  export["tags"][tag.handle] = {
+	    "type":dict(tag.TAG_TYPES)[tag.type],
+	    "glossary": tag.glossary.pk if tag.glossary is not None else None,
+	    "alias_of": tag.alias_of.handle if tag.alias_of is not None else None,
+	    "url": tag.get_absolute_url()}
+
+
+	for item in Item.objects.all():
+	  export["items"][item.pk] = {
+	    "tags": [tag.handle for tag in item.tags.all()],
+	    "links": [link.pk for link in item.links.all()],
+	    "type": dict(ITEM_TYPES)[item.type]}
+	  item = item.downcast()
+	  if isinstance(item, Person):
+	    export["items"][item.pk].update({
+	      "name": item.name,
+	      "headline": item.headline,
+	      "about": item.about})
+	  elif isinstance(item, TextItem):
+	    export["items"][item.pk].update({
+	      "title": item.title,
+	      "text": item.text,
+	      "author": item.author.pk if item.author is not None else None})
+```
+
+Example usage
+=============
+
+```
+	>>> import cPickle as pickle
+	>>> export = pickle.load(open("export_starfish_tjp.pickle"))
+	>>> len(export["tags"])
+	171
+	>>> len(export["items"])
+	181
+	>>> export["tags"]["LearningAnalytics"]
+	{'glossary': 167L, 'type': 'Topic', 'alias_of': None, 'url': '/tag/LearningAnalytics'}
+	>>> export["items"][167]["text"][:50]
+	u'<p>SoLAR, the international community for research'
+	>>> [export["items"][link]["type"] for link in export["items"][167]["links"]]
+	['Project', 'Person']
+```
+

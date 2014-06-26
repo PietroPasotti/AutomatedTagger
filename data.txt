@@ -1,0 +1,481 @@
+ rnational Journal on Artiﬁcial Intelligence Tools
+. 13, No. 1 (2004) 157–169
+World Scientiﬁc Publishing Company
+  YWORD EXTRACTION FROM A SINGLE DOCUMENT USING
+   WORD CO-OCCURRENCE STATISTICAL INFORMATION
+                                          Y. MATSUO
+              National Institute of Advanced Industrial Science and Technology
+                                       y.matsuo@aist.go.jp
+                                         M. ISHIZUKA
+                                       University of Tokyo
+                                  ishizuka@miv.t.u-tokyo.ac.jp
+                                     Received 18 July 2003
+                                    Revised 19 October 2003
+                                   Accepted 19 October 2003
+  We present a new keyword extraction algorithm that applies to a single document with-
+  out using a corpus. Frequent terms are extracted ﬁrst, then a set of co-occurrences
+  between each term and the frequent terms, i.e., occurrences in the same sentences, is
+  generated. Co-occurrence distribution shows importance of a term in the document as
+  follows. If the probability distribution of co-occurrence between term a and the frequent
+  terms is biased to a particular subset of frequent terms, then term a is likely to be
+  a keyword. The degree of bias of a distribution is measured by the χ2 -measure. Our
+  algorithm shows comparable performance to tﬁdf without using a corpus.
+  Keywords: Keyword extraction; co-occurrence; χ2 -measure.
+ Introduction
+yword extraction is an important technique for document retrieval, Web page re-
+ val, document clustering, summarization, text mining, and so on. By extracting
+propriate keywords, we can easily choose which document to read to learn the
+ationship among documents. A popular algorithm for indexing is the tﬁdf mea-
+ e, which extracts keywords that appear frequently in a document, but that don’t
+pear frequently in the remainder of the corpus. The term “keyword extraction”
+ sed in the context of text mining, for example 15 . A comparable research topic is
+led “automatic term recognition” in the context of computational linguistics and
+ tomatic indexing” or “automatic keyword extraction” in information retrieval
+earch.
+ Recently, numerous documents have been made available electronically. Domain-
+ ependent keyword extraction, which does not require a large corpus, has many
+plications. For example, if one encounters a new Web page, one might like to know
+                                               157
+    Y. Matsuo & M. Ishizuka
+  contents quickly by some means, e.g., by having the keywords highlighted. If
+e wants to know the main assertion of a paper, one would want to have some
+ywords. In these cases, keyword extraction without a corpus of the same kind
+ documents is very useful. Word count 8 is sometimes suﬃcient for document
+erview; however, a more powerful tool is desirable.
+  This paper explains a keyword extraction algorithm based solely on a single
+cument. First, frequent terms are extracted. Co-occurrences of a term and fre-
+ent terms are counted. If a term appears frequently with a particular subset of
+ ms, the term is likely to have important meaning. The degree of bias of the co-
+currence distribution is measured by the χ2 -measure. We show that our keyword
+ raction performs well without the need for a corpus. In this paper, a term is
+ﬁned as a word or a word sequence. We do not intend to limit the meaning in a
+ minological sense. A word sequence is written as a phrase.
+  This paper is organized as follows. The next section describes our idea of key-
+ rd extraction. We describe the algorithm in detail followed by evaluation and
+ cussion. Finally, we summarize our contributions.
+ Term Co-occurrence and Importance
+document consists of sentences. In this paper, a sentence is considered to be a set
+words separated by a stop mark (“.”, “?” or “!”). We also include document titles,
+ tion titles, and captions as sentences. Two terms in a sentence are considered to
+ occur once. That is, we see each sentence as a “basket,” ignoring term order and
+  mmatical information except when extracting word sequences.
+  We can obtain frequent terms by counting term frequencies. Let us take a very
+mous paper by Alan Turing 20 as an example. Table 1 shows the top ten frequent
+ ms and the probability of occurrence, normalized so that the sum is to be 1
+ ., normalized relative frequency). Next, a co-occurrence matrix is obtained by
+unting frequencies of pairwise term co-occurrences, as shown in Table 2. For
+ample, term a and term b co-occur in 30 sentences in the document. Let N denote
+  number of diﬀerent terms in the document. While the term co-occurrence matrix
+an N × N symmetric matrix, Table 2 shows only a part of the whole – an N × 10
+ trix. We do not deﬁne diagonal components.
+  Assuming that term w appears independently from frequent terms (denoted as
+, the distribution of co-occurrence of term w and the frequent terms is similar to
+  unconditional distribution of occurrence of the frequent terms shown in Table 1.
+                     Table 1.    Frequency and probability distribution.
+requent term     a       b        c       d        e       f       g     h      i         j    Total
+ Frequency      203      63      44      44       39      36      35    33     30        28     555
+Probability    0.366 0.114 0.079 0.079 0.070 0.065 0.063 0.059 0.054 0.050                      1.0
+ achine, b computer, c question, d digital, e answer, f game, g argument, h make, i state, j number
+               Keyword Extraction Using Word Co-Occurrence Statistical Information       159
+                            Table 2.   A co-occurrence matrix.
+                 a     b      c     d    e      f     g    h    i    j    Total
+           a     –    30     26    19   18     12    12   17   22    9     165
+           b    30     –      5    50    6     11     1    3    2    3     111
+           c    26     5      –     4   23     7      0    2    0    0      67
+           d    19    50      4     –    3     7      1    1    0    4      89
+           e    18     6     23     3    –     7      1    2    1    0      61
+           f    12    11      7     7    7     –      2    4    0    0      50
+           g    12     1      0     1    1     2      –    5    1    0      23
+           h    17     3      2     1    2     4      5    –    0    0      34
+           i    22     2      0     0    1     0      1    0    –    7      33
+           j     9     3      0     4    0     0      0    0    7    –      23
+          ···   ···   ···    ···   ···  ···   ···    ···  ···  ···  ···    ···
+           u     6     5      5     3    3     18     2    2    1    0      45
+           v    13    40      4    35    3     6      1    0    0    2     104
+           w    11     2      2     1    1     0      1    4    0    0      22
+           x    17     3      2     1    2     4      5    0    0    0      34
+        u: imitation, v: digital computer, w: kind, x: make
+. 1. Co-occurrence probability distribution of the terms “kind”, “make”, and frequent terms.
+nversely, if term w has a semantic relation with a particular set of terms g ∈ G,
+occurrence of term w and g is greater than expected, the distribution is said to
+ biased.
+ Figures 1 and 2 show the co-occurrence probability distribution of some terms
+d frequent terms. In the ﬁgures, unconditional distribution of frequent terms is
+ wn as “unconditional”. A general term such as ‘kind” or “make” is used relatively
+partially with each frequent term, while a term such as “imitation” or “digital
+mputer” shows co-occurrence with particular terms. These biases are derived
+m either semantic, lexical, or other relationships between two terms. Thus, a
+    Y. Matsuo & M. Ishizuka
+ . 2. Co-occurrence probability distribution of the terms “imitation”, “digital computer”, and
+quent terms.
+ m with co-occurrence biases may have an important meaning in a document. In
+ s example, “imitation” and “digital computer” are important terms, as we all
+ow: In this paper, Turing proposed an “imitation game” to replace the question
+ an machines think?”
+  Therefore, the degree of biase of co-occurrence can be used as a indicator of
+ m importance. However, if term frequency is small, the degree of biases is not
+iable. For example, assume term w1 appears only once and co-occurs only with
+ m a once (probability 1.0). At the other extreme, assume term w2 appears 100
+  es and co-occurs only with term a 100 times (with probability 1.0). Intuitively,
+ seems more reliably biased. In order to evaluate statistical signiﬁcance of biases,
+ use the χ2 test, which is very common for evaluating biases between expected
+quencies and observed frequencies. For each term, frequency of co-occurrence
+th the frequent terms is regarded as a sample value; the null hypothesis is that
+ccurrence of frequent terms G is independent from occurrence of term w,” which
+ expect to reject.
+  We denote the unconditional probability of a frequent term g ∈ G as the ex-
+cted probability pg and the total number of co-occurrences of term w and fre-
+ent terms G as nw . Frequency of co-occurrence of term w and term g is written
+ f req(w, g). The statistical value of χ2 is deﬁned as
+                                       (f req(w, g) − nw pg )2
+                      χ2 (w) =                                  .                          (1)
+                                                 nw p g
+                                 g∈G
+χ2 (w) > χ2 , the null hypothesis is rejected with signiﬁcance level α. The term
+             α
+ pg represents the expected frequency of co-occurrence; and (f req(w, g) − n w pg )
+              Keyword Extraction Using Word Co-Occurrence Statistical Information 161
+                         Table 3.  Terms with high χ2 value.
+                    Rank      χ2            Term         Frequency
+                       1     593.7   digital computer        31
+                       2     179.3    imitation game         16
+                       3     163.1         future             4
+                       4     161.3        question           44
+                       5     152.8        internal            3
+                       6     143.5         answer            39
+                       7     142.8      input signal          3
+                       8     137.7        moment              2
+                       9     130.7          play              8
+                      10     123.0         output            15
+                       .
+                       .       .
+                               .              .
+                                              .               .
+                                                              .
+                       .       .              .               .
+                     553      0.8            Mr.              2
+                     554      0.8       sympathetic           2
+                     555      0.7            leg              2
+                     556      0.7           chess             2
+                     557      0.6         Pickwick            2
+                     558      0.6           scan              2
+                     559      0.3           worse             2
+                     560      0.1            eye              2
+                   (We set the top ten frequent terms as G.)
+ resents the diﬀerence between observed and expected frequencies. Therefore,
+ge χ2 (w) indicates that co-occurrence of term w shows strong bias. In this paper,
+ use the χ2 -measure as an index of biases, not for tests of hypotheses.
+ Table 3 shows terms with high χ2 values and ones with low χ2 values in Turing’s
+per. Generally, terms with large χ2 are relatively important in the document;
+ms with small χ2 are relatively trivial. The table excludes terms whose frequency
+ ess than two. However, we don’t have to deﬁne such a threshold, because low
+quency usually indicates low χ2 value (unless nw pg is very large, which is quite
+usual.)
+ In summary, our algorithm ﬁrst extracts frequent terms as a “standard”; then
+ xtracts terms with high deviation from the standard as keywords.
+ Algorithm Description and Improvement
+the previous section, the basic idea of our algorithm is described. This section
+es the precise algorithm description and two algorithm improvements: calculation
+χ2 value and clustering of terms. These improvements lead to better performance.
+ . Calculation of χ2 values
+ improve the calculation of the χ2 value, we focus on two aspects: variety of
+ tence length and robustness of the χ2 value.
+    Y. Matsuo & M. Ishizuka
+  First, we consider the length of sentences. A document consists of sentences of
+rious lengths. If a term appears in a long sentence, it is likely to co-occur with
+ ny terms; if a term appears in a short sentence, it is less likely to co-occur with
+  er terms. We consider the length of each sentence and revise our deﬁnitions. We
+note
+     • pg as (the sum of the total number of terms in sentences where g appears)
+        divided by (the total number of terms in the document),
+     • nw as the total number of terms in sentences where w appears.
+ ain nw pg represents the expected frequency of co-occurrence. However, its value
+comes more precise.a
+  Second, we consider the robustness of the χ2 value. A term co-occurring with
+  articular term g ∈ G has a high χ2 value. However, these terms are sometimes
+juncts of term g and not important terms. For example, in Table 3, a term
+ ture” or “internal” co-occurs selectively with the frequent term “state,” because
+ se terms are used in the form of “future state” and “internal state.” Though
+ values for these terms are high, “future” and “internal” themselves are not
+portant. Assuming that “state” is not a frequent term, χ2 values of these terms
+minish rapidly.
+  We use the following function to measure robustness of bias values; it subtracts
+  maximal term from the χ2 value,
+                                                (f req(w, g) − nw pg )2
+                χ 2 (w) = χ2 (w) − max                                      .                  (2)
+                                       g∈G               nw p g
+ing this function, we can estimate χ 2 (w) as low if w co-occurs selectively with
+ly one term. It will have a high value if w co-occurs selectively with more than
+e term.
+2. Clustering of terms
+me terms co-occur with each other and clusters of terms are obtained by combin-
+  co-occurring terms. Below we show how to calculate the χ2 value more reliably
+ clustering terms.
+  A co-occurrence matrix is originally an N × N matrix, where columns corre-
+onding to frequent terms are extracted for calculation. We ignore the remaining
+ umns, i.e., co-occurrence with low frequency terms, because it is diﬃcult to es-
+  ate precise probability of occurrence for low frequency terms.
+  To improve extracted keyword quality, it is very important to select the proper
+  of columns from a co-occurrence matrix. The set of columns is preferably or-
+ogonal; assuming that terms g1 and g2 appear together very often, co-occurrence
+  is the probability of a term in a document to co-occur with g. Each term can co-occur with
+ltiple terms. Therefore, the sum of pg for all terms is not 1.0 but the average number of frequent
+ms in a sentence.
+               Keyword Extraction Using Word Co-Occurrence Statistical Information 163
+                            Table 4.  Two transposed columns.
+                      a     b     c   d     e    f   g   h    i    j   ...
+                 c   26     5    —    4    23    7   0   2   0    0    ...
+                 e   18     6    23   3    —     7   1   2   1    0    ...
+                    Table 5.  Clustering of the top 49 frequent terms.
+                C1:     game, imitation, imitation game, play, programme
+                C2:     system, rules, result, important
+                C3:     computer, digital, digital computer
+                C4:     behaviour, random, law
+                C5:     capacity, storage
+                C6:     question, answer
+                ···     ···
+                C26:    human
+                C27:    state
+                C28:    learn
+terms w and g1 might imply the co-occurrence of w and g2 . Thus, term w will
+ e a high χ2 value; this is very problematic. It is straightforward to extract an or-
+ gonal set of columns, however, to prevent the matrix from becoming too sparse,
+ will cluster terms (i.e., columns).
+ Many studies address term clustering. Two major approaches 6 are:
+milarity-based clustering If terms w1 and w2 have similar distribution of co-
+   occurrence with other terms, w1 and w2 are considered to be in the same
+   cluster.
+irwise clustering If terms w1 and w2 co-occur frequently, w1 and w2 are con-
+   sidered to be in the same cluster.
+ble 4 shows an example of two (transposed) columns extracted from a co-
+ urrence matrix. Similarity-based clustering centers upon boldface ﬁgures and
+rwise clustering focuses on italic ﬁgures.
+  By similarity-based clustering, terms with the same role, e.g., “Monday,” “Tues-
+ ,” ..., or “build,” “establish,” and “found” are clustered 13 . In our preliminary
+ eriment, when applied to a single document similarity-based clustering groups
+ aphrases and a phrase and its component (e.g., “digital computer” and “com-
+ er”). Similarity of two distributions is measured statistically by Kullback-Leibler
+ergence or Jensen-Shannon divergence 2 .
+  On the other hand, pairwise clustering yields relevant terms in the same clus-
+: “doctor,” “nurse,” and “hospital” 19 . A frequency of co-occurrence or mutual
+ormation can be used to measure the degree of relevance 1,3 .
+  Our algorithm uses both types of clustering. First we cluster terms by a simi-
+ ty measure (using Jensen-Shannon divergence); subsequently, we apply pairwise
+stering (using mutual information). Table 5 shows an example of term cluster-
+    Y. Matsuo & M. Ishizuka
+ . Proper clustering of frequent terms results in an appropriate χ2 value for each
+ m. We don’t take the size of the cluster into account for simplicity. Balancing
+  clusters may improve the algorithm performance.
+   Below, co-occurrence of a term and a cluster implies co-occurrence of the term
+d any term in the cluster.
+3. Algorithm
+ e algorithm follows. Thresholds are determined by preliminary experiments.
+ Preprocessing: Stem words by Porter algorithm 14 and extract phrases based on
+ the APriori algorithm 5 . We extract phrases of up to 4 words with frequency
+ more than 3 times. Discard stop words included in stop list used in the SMART
+ system 16 .
+ Selection of frequent terms: Select the top frequent terms up to 30% of the
+ number of running terms, Ntotal .
+ Clustering frequent terms: Cluster a pair of terms whose Jensen-Shannon diver-
+ gence is above the threshold (0.95 × log 2). Jensen-Shannon divergence is deﬁned
+ as
+                       1
+  J(w1 , w2 ) = log2 +          h(P (w |w1 ) + P (w |w2 )) − h(P (w |w1 )) − h(P (w |w2 ))
+                       2
+                         w ∈C
+ where h(x) = −x log x, P (w |w1 ) = f req(w , w1 )/f req(w1 ). Cluster a pair of
+ terms whose mutual information is above the threshold (log(2.0)). Mutual infor-
+ mation between w1 and w2 is deﬁned as
+                                               P (w1 , w2 )
+                          M (w1 , w2 ) = log
+                                             P (w1 )P (w2 )
+                                             Ntotal f req(w1 , w2 )
+                                       = log                        .
+                                              f req(w1 )f req(w2 )
+ Two terms are in the same cluster if they are clustered by either of the two
+ clustering algorithms. The obtained clusters are denoted as C.
+ Calculation of expected probability: Count the number of terms co-occurring
+ with c ∈ C, denoted as nc , to yield the expected probability pc = nc /Ntotal .
+ Calculation of χ 2 value: For each term w, count co-occurrence frequency with
+ c ∈ C, denoted as f req(w, c). Count the total number of terms in the sentences
+ including w, denoted as nw . Calculate the χ 2 value following
+                        (f req(w, c) − nw pc )2             (f req(w, c) − nw pc )2
+      χ 2 (w) =                                   − max                               .
+                                nw p c               c∈G              nw p c
+                  c∈G
+ Output keywords: Show a given number of terms having the largest χ 2 value.
+  In this paper, we use both nouns and verbs because verbs or verb+noun are
+metimes important for illustrating the content of the document. Of course, we
+n apply our algorithm only to nouns.
+               Keyword Extraction Using Word Co-Occurrence Statistical Information      165
+                 Table 6.  Improved results of terms with high χ2 value.
+                 Rank       χ2               Term             Frequency
+                    1     380.4        digital computer           63
+                    2     259.7        storage capacity           11
+                    3     202.5         imitation game            16
+                    4     174.4             machine              203
+                    5     132.2          human mind                2
+                    6      94.1           universality             6
+                    7      93.7              logic                10
+                    8      82.0            property               11
+                    9      77.1              mimic                 7
+                   10      77.0     discrete-state machine        17
+ Table 6 shows the results for Turing’s paper. Important terms are extracted
+ardless of their frequencies.
+ Evaluation
+  information retrieval, index terms are evaluated by their retrieval performance,
+mely recall and precision. However, we claim that our algorithm is useful when
+orpus is not available due to cost or time to collect documents, or in a situation
+ere document collection is infeasible.
+ Keywords are sometimes attached to a paper; however, they are not deﬁned in
+onsistent way. Therefore, we employ author-based evaluation. Twenty authors
+technical papers in artiﬁcial intelligence research have participated in the ex-
+ iment. For each author, we showed keywords extracted from his/her paper by
+erm frequency), tﬁdf b , KeyGraph, and our algorithm. KeyGraph 11 is a keyword
+raction algorithm which requires only a single document as does our algorithm.
+ alculates term weight based on term co-occurrence information and was recently
+d to analyze a variety of data in the context of Chance Discovery 12 .
+ All these methods use word stem, elimination of stop words, and extraction of
+ ases. Using each method we extracted, gathered, and shuﬄed the top 15 terms.
+en, the authors were asked to check terms which they thought were important
+the paper. Precision can be calculated by the ratio of the checked terms to 15
+ms derived by each method. Furthermore, the authors were asked to select ﬁve (or
+re) terms which they thought were indispensable for the paper. Coverage of each
+thod was calculated by taking the ratio of the indispensable terms included in the
+terms to all the indispensable terms. It is desirable to have the indispensable term
+ beforehand. However, it is very demanding for authors to provide a keyword
+ without seeing a term list. In our experiment, we allowed authors to add any
+ e corpus is 166 papers in JAIR (Journal of Artiﬁcial Intelligence Research) from Vol. 1 in
+3 to Vol. 14 in 2001. The idf is deﬁned by log(D/df (w)) + 1, where D is the number of all
+uments and df (w) is the number of documents including w.
+    Y. Matsuo & M. Ishizuka
+                  Table 7.   Precision and coverage for 20 technical papers.
+                                         tf      KeyGraph      ours     tﬁdf
+                       Precision        0.53        0.42       0.51     0.55
+                       Coverage         0.48        0.44       0.62     0.61
+                  Frequency index       28.6        17.3       11.5     18.1
+                          Table 8.   Results with respect to phrases.
+                                             tf    KeyGraph      ours    tﬁdf
+                     Ratio of phrases       0.11       0.14      0.33    0.33
+                  Precision w/o phrases     0.42       0.36      0.42    0.45
+                   Recall w/o phrases       0.39       0.36      0.46    0.54
+ ms in the paper to the indispensable term list (even if they were not derived by
+y of the methods.).
+  Results are shown in Table 7. For each method, precision was around 0.5. How-
+er, coverage using our method exceeds that of tf and KeyGraph and is comparable
+ that of tﬁdf; both tf and tﬁdf selected terms which appeared frequently in the
+cument (although tﬁdf considers frequencies in other documents). On the other
+nd, our method can extract keywords even if they do not appear frequently. The
+quency index in the table shows average frequency of the top 15 terms. Terms
+ racted by tf appear about 28.6 times, on average, while terms by our method
+pear only 11.5 times. Therefore, our method can detect “hidden” keywords. We
+n use the χ2 value as a priority criterion for keywords because precision of the
+   10 terms by our method is 0.52, that of the top 5 is 0.60, while that of the top 2
+as high as 0.72. Though our method detects keywords consisting of two or more
+ rds well, it is still nearly comparable to tﬁdf if we discard such phrases, as shown
+Table 8.
+  Computational time of our method is shown in Figure 3. The system is imple-
+ nted in C++ on a Linux OS, Celeron 333MHz CPU machine. Computational
+  e increases approximately linearly with respect to the number of terms; the
+ocess completes itself in a few seconds if the given number of terms is less than
+ 000.
+ Discussion and Related Work
+ -occurrence has attracted interest for a long time in computational linguistics.
+r example, co-occurrence in particular syntactic contexts is used for term clus-
+ ing 13 . Co-occurrence information is also useful for machine translation: for ex-
+ ple, Tanaka et al. uses co-occurrence matrices of two languages to translate an
+ biguous term 19 . Co-occurrence is also used for query expansion in information
+ rieval 17 .
+  Weighting a term by occurrence dates back to the 1950s in the study by Luhn 8 .
+                     Keyword Extraction Using Word Co-Occurrence Statistical Information   167
+                     10
+                                                                          time
+                      8
+                      6
+           time(s)
+                      4
+                      2
+                      0
+                          0      5000    10000      15000        20000   25000   30000
+                                         number of terms in a document
+                      Fig. 3.   Number of total terms and computational time.
+re elaborate measures of term occurrence have been developed 18,10 by essentially
+ nting term frequencies. Kageura and Umino summarized ﬁve groups of weighting
+asure 7 :
+  ) a word which appears in a document is likely to be an index term;
+  ) a word which appears frequently in a document is likely to be an index term;
+  ) a word which appears only in a limited number of documents is likely to be
+    an index term for these documents;
+ ) a word which appears relatively more frequently in a document than in the
+    whole database is likely to be an index term for that document;
+ ) a word which shows a speciﬁc distributional characteristic in the database is
+    likely to be an index term for the database.
+r algorithm corresponds to approach (v). Nagao used the χ2 value to calculate
+    Y. Matsuo & M. Ishizuka
+   weight of words 9 , which also corresponds to approach (v). But our method
+es a co-occurrence matrix instead of a corpus, enabling keyword extraction using
+ly the document itself.
+  From a probabilistic point of view, a method for estimating probability of previ-
+sly unseen word combinations is important 2 . Several papers have addressed this
+ue, but our algorithm uses co-occurrence with frequent terms, which alleviates
+   estimation problem.
+  In the context of text mining, to discover keywords or keyword relationships is
+ important topic 4,15 . The general purpose of knowledge discovery is to extract
+plicit, previously unknown, and potentially useful information from data. Our
+ orithm can be considered a text mining tool in that it extracts important terms
+en if they are rare.
+ Conclusion
+ this paper, we developed an algorithm to extract keywords from a single docu-
+ nt. Main advantages of our method are its simplicity without requiring use of
+  orpus and its high performance comparable to tﬁdf. As more electronic docu-
+ nts become available, we believe our method will be useful in many applications,
+  ecially for domain-independent keyword extraction.
+  ferences
+ ] K. W. Church and P. Hanks. Word association norms, mutual information, and lex-
+    icography. Computational Linguistics, 16(1):22, 1990.
+ ] I. Dagan, L. Lee, and F. Pereira. Similarity-based models of word cooccurrence prob-
+    abilities. Machine Learning, 34(1):43, 1999.
+ ] T. Dunning. Accurate methods for the statistics of surprise and coincidence. Com-
+    putational Linguistics, 19(1):61, 1993.
+ ] R. Feldman, M. Fresko, Y. Kinar, Y. Lindell, O. Liphstat, M. Rajman, Y. Schler,
+    and O. Zamir. Text mining at the term level. In Proceedings of the Second European
+    Symposium on Principles of Data Mining and Knowledge Discovery, page 65, 1998.
+ ] Johannes F¨rnkranz. A study using n-grams features for text categorization. Techni-
+                u
+    cal Report OEFAI-TR-98-30, Austrian Research Institute for Artiﬁcial Intelligence,
+    1998.
+ ] Thomas Hofmann and Jan Puzicha. Statistical models for co-occurrence data. Tech-
+    nical Report AIM-1625, Massachusetts Institute of Technology, 1998.
+ ] K. Kageura and B. Umino. Methods of automatic term recognition. Terminology,
+    3(2):259, 1996.
+ ] H. P. Luhn. A statistical approach to mechanized encoding and searching of literary
+    information. IBM Journal of Research and Development, 1(4):390, 1957.
+ ] M. Nagao, M. Mizutani, and H. Ikeda. An automated method of the extraction of
+    important words from Japanese scientiﬁc documents. Transactions of Information
+    Processing Society of Japan, 17(2):110, 1976.
+] T. Noreault, M. McGill, and M. B. Koll. A Performance Evaluation of Similarity
+    Measure, Document Term Weighting Schemes and Representations in a Boolean En-
+    vironment. Butterworths, London, 1977.
+               Keyword Extraction Using Word Co-Occurrence Statistical Information 169
+ Y. Ohsawa, N. E. Benson, and M. Yachida. KeyGraph: Automatic indexing by co-
+ occurrence graph based on building construction metaphor. In Proceedings of the
+ Advanced Digital Library Conference, 1998.
+ Yukio Ohsawa. Chance discoveries for making decisions in complex real world. New
+ Generation Computing, to appear.
+ F. Pereira, N. Tishby, and L. Lee. Distributional clustering of English words. In
+ Proceedings of the 31th Meeting of the Association for Computational Linguistics,
+ pages 183–190, 1993.
+ M. F. Porter. An algorithm for suﬃx stripping. Program, 14(3):130, 1980.
+ M. Rajman and R. Besancon. Text mining – knowledge extraction from unstructured
+ textual data. In Proceedings of the 6th Conference of International Federation of
+ Classiﬁcation Societies, 1998.
+ G. Salton. Automatic Text Processing. Addison-Wesley, 1988.
+ H. Schutze and J. O. Pederson. A cooccurrence-based thesaurus and two applications
+ to information retrieval. Information Processing and Management, 33(3):307–318,
+ 1997.
+ K. Sparck-Jones. A statistical interpretation of term speciﬁcity and its application
+ in retrieval. Journal of Documentation, 28(5):111, 1972.
+ K. Tanaka and H. Iwasaki. Extraction of lexical translations from non-aligned cor-
+ pora. In Proceedings of the 16th International Conference on Computational Linguis-
+ tics, page 580, 1996.
+ A. M. Turing. Computing machinery and intelligence. Mind, 59:433, 1950.
