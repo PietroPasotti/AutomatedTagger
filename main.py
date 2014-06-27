@@ -289,10 +289,19 @@ def ParseCorpus():
 	for text in _corpus:
 		
 		x2.RunFullAnalysis(text)
+		
 
 def test(itemno):
 	
 	global _corpus,_urls,_links,_export
+	
+	reset = True
+	
+	if reset:
+		_corpus = []
+		_links = []
+		_keywords = []
+		_urls = []
 
 	if _export is None:
 		sys.stdout.write('Populating _export database...')
@@ -313,5 +322,50 @@ def test(itemno):
 	ParseCorpus()
 	
 	print("[ Done. ]")
+
+def testx2prime(itemno=1):
 	
+	test(itemno)
+	
+	x2.RunFullX2prime()
+	
+def RunFullCooccurrenceOnlyTest(itemno = 1):
+	global _export
+	
+	if _export is None:
+		LoadExport()
+
+	RESULTS = {}	
+	evaluation = {}
+	
+	for item in _export['items']:
+		test(item)
+				
+		top_co_occurr = x2.HighestNumbers(5, x2.co_occurrences ,getvalues = True)
+		top_freq = x2.HighestNumbers(5, x2.words_count ,getvalues = True)
+		
+		RESULTS[item] = (top_co_occurr,top_freq)
+		
+		for otheritem in _export['items']:
+			if otheritem != item:
+				evaluation[frozenset({item,otheritem})] = 0
+	
+	def matcher(item1,item2):
+		
+		val = 0
+		
+		COres1,FRres1 = RESULTS[item1]
+		COres2,FRres2 = RESULTS[item2]
+		
+		summ = len(set(COres1).union(set(COres2)))
+		
+		return len(set(COres1)) + len(set(COres2)) - summ
+	
+	for pair in evaluation:
+		A,B = pair
+		evaluation[pair] = matcher(A,B)
+		
+	return evaluation
+	
+
 #test(1)

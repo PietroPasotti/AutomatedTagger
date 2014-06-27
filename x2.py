@@ -33,7 +33,7 @@ def NiceDisplay(tuplelist):
 		
 		print(a,' --> ',b)
 
-def HighestNumbers(maxno,dictionary,threshold = None):
+def HighestNumbers(maxno,dictionary,threshold = None,getvalues = False):
 	"""
 	Compute and print the highest-valued entries of the dictionary. The dictionary must be of the form "X : int()".
 	Set threshold in order to filter out uninterestingly infrequent results. (May be risky with very small _text.)
@@ -60,7 +60,11 @@ def HighestNumbers(maxno,dictionary,threshold = None):
 		if len(mlist) == 0:
 			break
 		
-	NiceDisplay(sortedresults)
+	
+	
+	if getvalues:
+		NiceDisplay(sortedresults)
+		return sortedresults
 
 def LoadTextFromDefault():
 	
@@ -155,7 +159,7 @@ def Split(text = None):
 	else:
 		return None
 	
-def ComputePointwiseMutualInformation(worda,wordb):
+def ComputePointwiseMutualInformation_GOOGLE(worda,wordb):
 	
 	from googlecounter import googleHitCounter
 	
@@ -334,8 +338,166 @@ def DetectCompoundTerms():
 	print('Candidates for compound 2-word terms are: ')
 	
 	highestpairs = HighestNumbers(10,pairs,threshold = 2)
+
+def ComputeX2prime(termA,termB):
 	
+	global co_occurrences,words_count
+	
+	X2 = 0
+	
+	def frequency(A,B):
+		return co_occurrences[frozenset({A,B})]
+	
+	def expectedFrequency(A,B):
+		
+		n = lambda word : words_count[word]						#
+		T = sum([words_count[word] for word in words_count]) 	# total number of words in the doc/corpus
+		p = lambda word : n(word) / T
+		result = n(A) * p(B)
+		return result
+	
+	allGs = {}
+	
+	for g in words_count:
+		
+		FR = (frequency(termA,termB) - expectedFrequency(termA,termB)) ** 2
+		tempchi2 = FR / expectedFrequency(termA,termB)
+		
+		X2 += tempchi2
+		allGs.add(X2)
+		
+	return X2 - max(allGs)
+
+def ComputeTFIDF(term):
+	global _text_tokenized
+	
+	def TF(term):
+		c = 0
+		for sentence in _text_tokenized:
+			c += sentence.count(term)
+		return c
+		
+	# corpus of comparison is now starfish
+	import pickle
+	export = pickle.load(open( '/home/pietro/Perceptum/code/starfish/similarity/pickled_export/export_starfish_tjp_12jun.pickle' , 'rb' ))
+	data = export['items']
+		
+	def IDF(term):
+		alltexts = {item : data[item].get('text',data[item].get('about')) \
+					for item in data if data[item].get('text',data[item].get('about')) not in [None,'',' '] \
+					and not isinstance(data[item].get('text',data[item].get('about')) , int) }
+		counter = 0
+		for text in alltexts:
+			A = re.compile(term)
+			#print(alltexts[text])
+			if A.findall(alltexts[text]):
+				counter += 1
+		
+		if counter == 0:
+			return 0
+		return math.log((len(alltexts) / counter),2)
+	
+	return TF(term) * IDF(term)
+
+def TestTFIDF():
+	global _text_tokenized
+	
+	allterms = {term for term in [sentence for sentence in _text_tokenized]}
+	
+	idfs = {term : ComputeTFIDF(term) for term in allterms}
+	
+	return idfs
+		
+def RunFullX2prime():
+	
+	oriwordcorpus = []
+
+	for sentence in _text_tokenized:
+		for word in sentence:
+			oriwordcorpus.append(word)
+	
+	wordcorpus = []
+		
+	for i in range(len(oriwordcorpus)//3):
+		bestone = [word for word in oriwordcorpus if words_count.get(word) == max( [words_count.get(w,0) for w in oriwordcorpus] )]
+		bestone = bestone[0]
+		oriwordcorpus.remove(bestone)
+		wordcorpus.append(bestone)
+	
+	# we run the analysis only on the 30% of most frequent words
+	
+	# CLUSTERING
+	def P(W,G):
+		a = co_occurrences.get(frozenset({W,G}),0)
+		b = words_count.get(G,0)
+		if b == 0:
+			return 0
+		return a/b	
+		
+	clusterlist = []
+	
+	def J(termA,termB):
+		
+		smm = 0
+		
+		def h(x):
+			if x <= 0:
+				return 0
+			else:
+				return -x * math.log(x)
+
+		smm = 0
+		for i in wordcorpus:
+			divergence = h(P(i,termA)+P(i,termB)) - h(P(i,termA) - h(P(i,termB)))
+			smm += divergence
+		
+		val = math.log(2) + 1/2 * smm
+		return val
+	
+	def cluster(A,B):
+		for clus in clusterlist: # we search through all existing clusters
+			if A in clus:   # if either word is in a cluster
+				if B not in clus: 
+					clus.append(B)
+				return None
+			elif B in clus: # we add the other one to the same one and return
+				if A not in clus:
+					clus.append(A)
+				return None
+		clusterlist.append([A,B]) # otherwise, we form a new cluster
+		return None
+
+	def mutualinfo(terma,termb):
+		if words_count.get(terma,0) * words_count.get(termb,0) == 0:
+			return 0
+		return P(terma,termb) / words_count.get(terma,0) * words_count.get(termb,0)
+		
+	for terma in wordcorpus:
+		for termb in wordcorpus:
+			if termb != terma: 
+				if mutualinfo(terma,termb) >= math.log(2):
+					cluster(terma,termb)
+				elif J(terma,termb) >= (0.95 * math.log(2)):
+					cluster(terma,termb)
+	
+	print('Clustering: ' + str(clusterlist))
+	return clusterlist
+	
+
+		
+	
+
+
 def test():
+	
+	##### FLAGS #####
+	
+	nostemming = False
+	compounds = False
+	compare = True
+	
+	#################
+	
 	global _text,stopwords
 	start = time.clock()
 	print("Running x2 algorythm...")
@@ -358,30 +520,38 @@ def test():
 	print('Counting words...')
 	WordCount()
 	
-	print()
-	print('--- pre-stemming ---')
-	print('Running HighestNumbers(20,words_count)...')
-	HighestNumbers(20,words_count)
-	print()
-	print('Running HighestNumbers(20,co_occurrences)...')
-	HighestNumbers(20,co_occurrences)
+	if nostemming:
+		print()
+		print('--- pre-stemming ---')
+		print('Running HighestNumbers(20,words_count)...')
+		HighestNumbers(20,words_count)
+		print()
+		print('Running HighestNumbers(20,co_occurrences)...')
+		HighestNumbers(20,co_occurrences)
+	else:
+		print()
+		Stem_All()
+		print('Running HighestNumbers(20,words_count)...')
+		HighestNumbers(20,words_count)
+		print()
+		print('Running HighestNumbers(20,co_occurrences)...')
+		HighestNumbers(20,co_occurrences)	
 	
-	print()
-	Stem_All()
-	print('Running HighestNumbers(20,words_count)...')
-	HighestNumbers(20,words_count)
-	print()
-	print('Running HighestNumbers(20,co_occurrences)...')
-	HighestNumbers(20,co_occurrences)	
+	if compounds:
+		print()
+		print('Running compounds detection...')
+		DetectCompoundTerms()
+	else:
+		pass
 	
-	print()
-	print('Running compounds detection...')
-	DetectCompoundTerms()
-	
+	if compare:
+		print()
+		print('Comparing tfidf and co-occurrence ranking...')
+		
 	
 	elapsed = (time.clock() - start)
 	print('Done.')
-	print("[ Runtime -- {}]".format(elapsed))
+	print("[ Runtime -- {} ]".format(elapsed))
 	return None
 		
 # test()
