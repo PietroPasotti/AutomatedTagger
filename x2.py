@@ -13,11 +13,42 @@ _text_tokenized = None # list(list(str()))
 
 punctuation = (';', ':', ',', '.', '!', '?','(',')','[',']','{','}','-','”','“',"'") 
 stopwords = []
+dutchstopwords = []
 RESULTS = None
 
 co_occurrences = {}
 words_count = {}
 
+def CompileStopWordsDB():
+	global stopwords,dutchstopwords
+	
+	lines = None
+	with open('stopwords.txt','r') as stops:
+		lines = stops.readlines()
+	
+	for line in lines:
+
+		line = line.replace('\n','')
+		line = line.replace('\t',' ') # we capture away tabs
+		listedline = line.split(' ')
+		stopwords.extend(listedline)
+		
+	stopwords.extend(['',' ','.',',',';',':','-','_',"'",'"','*','···','...'])
+	
+	dlines = None
+	with open('dutchstops.txt','r') as dstops:
+		dlines = dstops.readlines()
+	
+	for line in dlines:
+		line = line.replace('\n','')
+		line = line.strip()
+		dutchstopwords.append(line) # here lines host a single word
+		
+	#dutchstopwords.extend(['',' ','.',',',';',':','-','_',"'",'"','*','···','...'])
+	
+	if stopwords == [] or dutchstopwords == []:
+		print('Bad: stopwords is empty.')
+	
 def NiceDisplay(tuplelist):
 	
 	for elem in tuplelist:
@@ -27,9 +58,14 @@ def NiceDisplay(tuplelist):
 			a1,a2 = a
 			a = "	{} {}".format(a1,a2)
 		else:
-			a = '	'+a
+			a = '	'+str(a)
 		
-		b = str(b)
+		if isinstance(b,int) or isinstance(b,float):
+			b = str(b)
+			if len(b) > 5:
+				b = b[:5]
+		else:
+			b = str(b)
 		
 		print(a,' --> ',b)
 
@@ -59,12 +95,11 @@ def HighestNumbers(maxno,dictionary,threshold = None,getvalues = False):
 		
 		if len(mlist) == 0:
 			break
-		
-	
-	
+			
 	if getvalues:
-		NiceDisplay(sortedresults)
 		return sortedresults
+	else:
+		NiceDisplay(sortedresults)
 
 def LoadTextFromDefault():
 	
@@ -73,7 +108,7 @@ def LoadTextFromDefault():
 		data = myfile.read().replace('\n', '')
 		_text = data
 		
-	print("Loaded default .txt document.")
+	#print("Loaded default .txt document.")
 
 def IsNumber(word):
 	
@@ -102,21 +137,47 @@ def Normalize(word):
 	
 	return word		
 
+def IsDutch(sentence):
+	
+	global dutchstopwords
+	
+	dprob = 0
+	
+	for word in dutchstopwords:
+		stringed = r"\b{}\b".format(word)
+		dstop = re.compile(stringed) # we capture a bound word in whatever context
+		matchlist = dstop.findall(' '.join(sentence))
+		if matchlist:
+			dprob += len(matchlist)
+	
+	if dprob >= 3: # we ask for at least 3 dutch stopwords to be there, to mark the sentence as dutch.
+		return True
+	else:
+		return False
+	
 def CleanUp():
 	
-	global _text_tokenized
+	global _text_tokenized,dutchstopwords,stopwords
+	
+	if stopwords == []:
+		CompileStopWordsDB()
 	
 	newtxt = []
 	
 	for sentence in _text_tokenized:
 		
-		newsentence = []	
+		newsentence = []		
+		STOPS = stopwords
+		
+		if IsDutch(sentence):
+			STOPS = dutchstopwords
+			
 		for word in sentence:
-			if word in punctuation or len(word) <= 2 or IsNumber(word) or word in stopwords:
+			if word in punctuation or len(word) <= 2 or IsNumber(word) or word in STOPS:
 				sentence.remove(word)
 			else:	
 				newsentence.append(word)
-		
+			
 		if newsentence != []:		
 			newtxt.append(newsentence)
 			
@@ -190,25 +251,6 @@ def EvaluatePairsRelevance(wordsDB,threshold):
 	
 	return wordsDB
 
-def CompileStopWordsDB():
-	global stopwords
-	
-	lines = None
-	with open('stopwords.txt','r') as stops:
-		lines = stops.readlines()
-	
-	for line in lines:
-
-		line = line.replace('\n','')
-		line = line.replace('\t',' ') # we capture away tabs
-		listedline = line.split(' ')
-		stopwords.extend(listedline)
-		
-	stopwords.extend(['',' ','.',',',';',':','-','_',"'",'"','*','···','...'])
-	
-	if stopwords == []:
-		print('Bad: stopwords is empty.')
-	
 def EvaluateCoOccurrence():
 	global stopwords,_text_tokenized,co_occurrences
 	
@@ -255,7 +297,7 @@ def Stem_All():
 	curAlg = (nltk.stem.lancaster.LancasterStemmer,'Lancaster')
 	#curAlg = (nltk.stem.PorterStemmer,'Porter')
 	
-	print('Running stemming algorithm [{}].'.format(curAlg[1]))
+	#print('Running stemming algorithm [{}].'.format(curAlg[1]))
 	
 	global co_occurrences,words_count
 	
@@ -304,11 +346,11 @@ def Stem_All():
 			
 	words_count = newordscount
 	
-	print( 'Done.')
+	#print( 'Done.')
 	return None
 
 def DetectCompoundTerms():
-	
+				
 	global _text_tokenized
 	
 	pairs = {}
@@ -482,23 +524,28 @@ def RunFullX2prime():
 	
 	print('Clustering: ' + str(clusterlist))
 	return clusterlist
-	
 
-		
-	
-
-
-def test():
-	
-	##### FLAGS #####
-	
-	nostemming = False
-	compounds = False
-	compare = True
-	
-	#################
-	
+def test(verbose = True,nostemming = False,compounds = False,compare = True):
 	global _text,stopwords
+	
+	if not verbose:
+		if _text is None:
+			LoadTextFromDefault()
+		
+		if stopwords == []:
+			CompileStopWordsDB()		
+
+		if isinstance(_text,str):
+			Split() # also calls CleanUp
+			EvaluateCoOccurrence()	
+			WordCount()
+		
+		if not nostemming:
+			Stem_All()
+			return None
+	
+	## Verbose mode:
+
 	start = time.clock()
 	print("Running x2 algorythm...")
 
@@ -519,7 +566,7 @@ def test():
 	EvaluateCoOccurrence()
 	print('Counting words...')
 	WordCount()
-	
+
 	if nostemming:
 		print()
 		print('--- pre-stemming ---')
@@ -556,13 +603,20 @@ def test():
 		
 # test()
 
-def RunFullAnalysis(text):
+def RunFullAnalysis(text,verbose = True):
 	"""Wants an input of type list(list(str()))."""
 	
-	global _text
+	global _text,co_occurrences,words_count
 	
 	_text = text
 	
-	test()
+	###### we clear all storage variables ######
+	
+	co_occurrences = {}
+	words_count = {}
+	
+	###### ------------------------------ ######
+	
+	test(verbose)
 
 

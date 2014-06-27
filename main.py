@@ -27,7 +27,8 @@ _relevance_hierarchy = {
 'Information' : 		('title','text','links','tags','author'),
 'Question' : 			('text','title','tags','links','author'),
 'Answer'  : 			('text','title','author','links','tags'),
-'Glossary'	:			('text','title','tags','links','author') 
+'Glossary'	:			('text','title','tags','links','author'),
+'Event'   :				('text','tags','title','author','links'),
  }
 
 lower_significance_bound = 2000
@@ -99,7 +100,7 @@ def CleanOfHtml(text):
 	
 	global _urls
 	
-	print('Cleaning...')
+	#print('Cleaning...')
 	soup = BeautifulSoup(text)
 	puretxt = soup.get_text()
 	
@@ -143,6 +144,8 @@ def Corpus_FeedWithText(item):
 	
 	text = CleanOfHtml(text)
 	
+	
+	
 	#text = x2.Split(text)
 	
 	_corpus.append(text)
@@ -179,10 +182,13 @@ def Corpus_FeedWithName(item):
 		
 		if isthereacapital(name):
 			name = Wordify(name)
+			namelist = name.split(' ')
 			
-			for elem in name: # strip all spaces
-				elem = elem.strip()
-				namelist[namelist.index(elem)] = elem
+			for elem in namelist:  
+				newelem = elem.strip() # strip all extra spaces
+				if newelem not in ['.','',',',' ']:
+					namelist[namelist.index(elem)] = newelem
+				
 		else:
 			
 			name = [name] # we try to take it as a single entity
@@ -195,9 +201,9 @@ def Corpus_FeedWithName(item):
 		name = ReDodge(name) # returns a compiled re object which matches name with error tolerance 1; also matches a tag with the full name
 	
 	else:
-		name = re.compile(r'{}'.format(name))
+		name = re.compile(r'{}'.format(' '.join(name)))
 	
-	print('Searching match for: ',name.pattern)	
+	#print('Searching match for: ',name.pattern)	
 	
 	matchingpeopleL = name.findall(','.join(allpeople))
 	
@@ -208,22 +214,22 @@ def Corpus_FeedWithName(item):
 	
 	if len(matchingpeople) == 1:
 		match = matchingpeople.pop() # a string: 'Pietro Pasotti'
-		sys.stdout.write('Matching name found: {}'.format(match))
+		#sys.stdout.write('Matching name found: {}'.format(match))
 
 		person_l = [ value for value in _export['items'].keys() if _export['items'][value].get('name') == match ]
 		person_link = person_l[0] # link for 'Pietro Pasotti' - Person item there
 		
-		sys.stdout.write('Existing link [{}] detected for Person "{}".'.format(person_link,_export['items'][person_link]['name']))
+		#sys.stdout.write('Existing link [{}] detected for Person "{}".'.format(person_link,_export['items'][person_link]['name']))
 		
 		_links.append(person_link)
 		
 		return True		
 		
 	elif len(matchingpeople) == 0:
-		print('No matching name found in database.')
+		#print('No matching name found in database.')
 		return None
 	else:
-		print('No single match found with name; suggestions are: {}'.format(matchingpeople))
+		#print('No single match found with name; suggestions are: {}'.format(matchingpeople))
 		return False
 	
 def Corpus_FeedWithLinks(item):
@@ -232,26 +238,32 @@ def Corpus_FeedWithLinks(item):
 	
 def Corpus_FeedWithTags(item):
 	
+	global _keywords, _corpus
+	
+	tagsOfItem = item['tags']
+	
+	wordifiedtags = [Wordify(tag) for tag in tagsOfItem]
+	
+	_corpus.extend(wordifiedtags)
+	
 	pass
 
 def Corpus_FeedWithAuthor(item):
 
 	pass
 	
-	
-
 def GatherCorpus(itemno):
 	"""Receives as input the number of an unpickled item as exported from Starfish."""
 	
 	global _relevance_hierarchy,_export,_corpus,pickle
 	
-	sys.stdout.write('Gathering corpus around item [{}]...'.format(itemno))
-	sys.stdout.write('      [ Done. ]\n')
+	#sys.stdout.write('Gathering corpus around item [{}]...'.format(itemno))
+	#sys.stdout.write('      [ Done. ]\n')
 	
 	if _export is None:
-		sys.stdout.write('Populating _export database...')
+		#sys.stdout.write('Populating _export database...')
 		LoadExport()
-		sys.stdout.write('      [ Done. ]\n')
+		#sys.stdout.write('      [ Done. ]\n')
 	
 	if itemno not in _export['items']: # LOCK
 		print('>>>   No item corresponding to search, sorry.   <<<')
@@ -278,20 +290,40 @@ def GatherCorpus(itemno):
 			Corpus_FeedWithAuthor(item)
 		elif content == 'text' and item.get('text',None) is not None:
 			Corpus_FeedWithText(item)
+		elif content == 'title' and item.get('title',None) is not None:
+			Corpus_FeedWithText(item['title']) # text, the same;
 		else:
-			print("Lost item info: '{}'".format(str(content)))
+			pass
+			#print("Lost item info: '{}'".format(str(content)))
+
+def Stringify(nestedlist):
+	
+	result = ''
+	
+	for elem in nestedlist:
+		if isinstance(elem,list):
+			string = Stringify(elem)
+			result = ' '.join([result,string])
+		else:
+			result = ' '.join([result,elem])
+	
+	return result
+
+#####
+corpusSizeToStatsDB = {}
+#####
 		
-def ParseCorpus():
+def ParseCorpus(itemno,verbose = True):
 	"""Function that, given a nonempty corpus and a __satisfied True condition, populates the _links and _keywords lists."""
 	
-	global _corpus
+	global _corpus, corpusSizeToStatsDB
 	
-	for text in _corpus:
+	onestringcorpus = Stringify(_corpus) # we make the corpus one big thing.
+	
+	corpusSizeToStatsDB[itemno] = {'length of corpus': len(onestringcorpus)}
+	x2.RunFullAnalysis(onestringcorpus,verbose)
 		
-		x2.RunFullAnalysis(text)
-		
-
-def test(itemno):
+def test(itemno,verbose = True):
 	
 	global _corpus,_urls,_links,_export
 	
@@ -302,70 +334,140 @@ def test(itemno):
 		_links = []
 		_keywords = []
 		_urls = []
-
+	
 	if _export is None:
-		sys.stdout.write('Populating _export database...')
+		if verbose: sys.stdout.write('Populating _export database...')
 		LoadExport()
-		sys.stdout.write('      [ Done. ]\n')	
+		if verbose: sys.stdout.write('      [ Done. ]\n')	
 	
 	if itemno not in _export['items']:
 		print('ERROR : Not a valid item number! Try with {}.'.format([itemN for itemN in list(_export['items'].keys()) if -4 < (itemN - itemno) < 4 ]))
 		return None
 		
 	GatherCorpus(itemno)
-	print('    ***Corpus:', _corpus,'\n','    ***Urls:',_urls, '    ***Links:',_links)
 	
-	print()
-	print("*** [Launching x2 algorithm...] ***")
-	print()
+	if verbose: print()
+	if verbose: print("*** [Launching x2 algorithm on [{}]...] ***".format(itemno))
 	
-	ParseCorpus()
+	realnum = max(_export['items'])
 	
-	print("[ Done. ]")
+	percentage = lambda x : x * (100 / realnum)
+	
+	perc = str(int(percentage(itemno))) + r"%"
+	
+	if not verbose: print("Running on [{}]; progress: {}".format(itemno,perc))
+	if verbose: print()
+
+	ParseCorpus(itemno,verbose)
 
 def testx2prime(itemno=1):
 	
 	test(itemno)
 	
 	x2.RunFullX2prime()
+
+#---------------#
+RESULTS = {}
+evaluation = {}
+#---------------#
+
+def RunFullCooccurrenceOnlyTest(verbose = False):
 	
-def RunFullCooccurrenceOnlyTest(itemno = 1):
-	global _export
+	global _export,RESULTS,evaluation
 	
 	if _export is None:
 		LoadExport()
 
-	RESULTS = {}	
-	evaluation = {}
+	RESULTS = {}	# we clear them
 	
-	for item in _export['items']:
-		test(item)
+	import analyzers
+	evaluation = analyzers.analyze(RESULTS,verbose)
+	
+def Search_MainRelationCandidates(itemno,threshold = 0,verbose = False):
+	
+	global evaluation, _export, corpusSizeToStatsDB
+	
+	allpairsEVAL = {key:evaluation[key] for key in evaluation if itemno in key and int(evaluation[key]) > threshold}
+	
+	allinks = []
+	
+	for pair in allpairsEVAL:
+		a,b = pair
+		if a != itemno:
+			allinks.append(a)
+		else:
+			allinks.append(b)
+	
+	#compare with existing links:
+	
+	actuallinks = _export['items'][itemno]['links']
+	
+	if verbose:
+		for no in allinks:
+			
+			pair = frozenset({itemno,no})
+			
+			if pair in allpairsEVAL:
+				print(str(pair) + ' detected with strength ' + str(allpairsEVAL[pair]))
+			else:
+				print(str(pair) + ' missed')
 				
-		top_co_occurr = x2.HighestNumbers(5, x2.co_occurrences ,getvalues = True)
-		top_freq = x2.HighestNumbers(5, x2.words_count ,getvalues = True)
-		
-		RESULTS[item] = (top_co_occurr,top_freq)
-		
-		for otheritem in _export['items']:
-			if otheritem != item:
-				evaluation[frozenset({item,otheritem})] = 0
+	capturedlinks = set(allinks).intersection(set(actuallinks))
 	
-	def matcher(item1,item2):
-		
-		val = 0
-		
-		COres1,FRres1 = RESULTS[item1]
-		COres2,FRres2 = RESULTS[item2]
-		
-		summ = len(set(COres1).union(set(COres2)))
-		
-		return len(set(COres1)) + len(set(COres2)) - summ
+	if len(actuallinks) > 0:
+		recall = (len(capturedlinks) * 100) / len(actuallinks)	# percentage of existing links captured
+	else:
+		recall = 101
 	
-	for pair in evaluation:
-		A,B = pair
-		evaluation[pair] = matcher(A,B)
+	if len(allinks) > 0:
+		precision =  (len(capturedlinks) * 100) / len(allinks)	# percentage of captured links existing
+	else:
+		precision = 101
 		
-	return evaluation
+	corpusSizeToStatsDB[itemno].update({'recall':recall,'precision':precision,'captured links':allinks})
 	
+	if (recall == 101 or precision == 101) and verbose:
+		print('Recall,precision set to 101 insofar as no link at all was present/detected. These will be IGNORED.')
+	else:
+		if verbose:
+			print('recall : {}, precision : {}, captured links : {}'.format(str(recall)[:5],str(precision)[:5],len(capturedlinks)))
+	
+	return (recall,precision,capturedlinks)
+
+def AverageRecallPrecision(threshold=0,verbose = False):
+
+	allnos = list(_export['items'].keys())
+	
+	recalls = []
+	precisions = []
+	captureds = []
+	
+	ignoreds = 0
+	
+	for no in allnos:
+		res = Search_MainRelationCandidates(no,threshold)
+		
+		recall,precision,captured = res
+		
+		if recall != 101 and precision != 101:		
+			recalls.append(recall)
+			precisions.append(precision)
+			captureds.append(len(captured))
+			
+		else:
+			ignoreds += 1
+	
+	avgrecall = sum(recalls) / len(recalls)	
+	avgprecision = sum(precisions) / len(precisions)
+	avgcaptureds = sum(captureds) / len(captureds)
+	
+	print("    Analysed {}".format(len(recalls)) +' items. Ignored [{}] items.'.format(ignoreds))
+	print(	"    >> Average recall: {}, "
+			"Average precision: {}, "
+			"Average captured links: {}".format(avgrecall,avgprecision,avgcaptureds))
+	
+	
+	
+	return avgrecall,avgprecision,avgcaptureds
 
 #test(1)
